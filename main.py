@@ -1,3 +1,4 @@
+import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -16,7 +17,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Conversation States
 CHOOSING_OPERATOR, CHOOSING_QUANTITY, ENTERING_CONTACT, SENDING_RECEIPT = range(4)
 
-# Fixed Price
+# Fixed Price (အော်ပရေတာ အားလုံး ၁၅,၀၀၀ ကျပ် တစ်ပြေးညီ)
 ESIM_PRICE = 15000
 
 # Start Command
@@ -123,33 +124,32 @@ async def request_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         f"စုစုပေါင်းကျသင့်ငွေ *{context.user_data['total_price']:,} ကျပ်* ကို အောက်ပါ အကောင့်သို့ လွှဲပေးပါရန်။\n\n"
         f"📱 *KPay / Wave:* 09xxxxxxxxx\n"
         f"👤 *Account Name:* U Kyaw Kyaw\n\n"
-        f"⚠️ ငွေလွှဲပြီးပါက *ငွေလွှဲပြေစာ Screenshot (Receipt)* ကို ဤနေရာသို့ ပို့ပေးပါရန်။ Admin မှ စစ်ဆေးပြီး eSIM QR ချက်ချင်း ပို့ပေးပါမည်။"
+        f"⚠️ Ngwe Lwe Bपीးပါက *ငွေလွှဲပြေစာ Screenshot (Receipt)* ကို ဤနေရာသို့ ပို့ပေးပါရန်။ Admin မှ စစ်ဆေးပြီး eSIM QR ချက်ချင်း ပို့ပေးပါမည်။"
     )
     await update.message.reply_text(payment_text, parse_mode="Markdown")
-    return ConversationHandler.END # End conversation flow, next is handling image receipt
+    return ConversationHandler.END
 
 # Handle Screenshot Receipt
 async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
-        # Here you can route the photo to Admin Group or Database
-        user = update.message.from_user
         await update.message.reply_text("✅ လူကြီးမင်း ပေးပို့သော ပြေစာကို လက်ခံရရှိပါပြီဗျာ။ Admin မှ စစ်ဆေးပြီး ခဏအတွင်း eSIM QR Code ပို့ပေးပါမည်။ ကျေးဇူးတင်ပါတယ်!")
-        
-        # Log or Send to Admin (Pseudo-code)
-        # await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"New Order from {user.username}...")
     else:
         await update.message.reply_text("❌ ကျေးဇူးပြု၍ ငွေလွှဲပြေစာ Screenshot (ဓာတ်ပုံ) ကို ပို့ပေးပါရန်။")
 
 def main():
-    # Replace with your actual Bot Token from BotFather
-    TOKEN = "YOUR_BOT_TOKEN_HERE" 
+    # Render ရဲ့ Environment Variable ထဲကနေ 'BOT_TOKEN' ကို လှမ်းဆွဲယူတဲ့ စနစ်ဖြစ်ပါတယ်
+    TOKEN = os.getenv("8154764798:AAFUx17AuTVW-AxvsX23aqhZaSNvXkaU-Fs")
     
+    if not TOKEN:
+        print("Error: BOT_TOKEN environment variable is missing!")
+        return
+        
     app = Application.builder().token(TOKEN).build()
     
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CallbackQueryHandler(start, pattern="^back_to_start$")],
         states={
-            CHOOSING_OPERATOR: [CallbackQueryHandler(choose_operator)],
+            CHOOSING_OPERATOR: [CallbackQueryHandler(choose_operator), CallbackQueryHandler(start, pattern="^back_to_start$")],
             CHOOSING_QUANTITY: [CallbackQueryHandler(choose_quantity)],
             ENTERING_CONTACT: [CallbackQueryHandler(request_contact)],
             SENDING_RECEIPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_payment)]
@@ -160,7 +160,7 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(MessageHandler(filters.PHOTO, handle_receipt))
     
-    print("Click eSIM Bot is running...")
+    print("Click eSIM Bot is running securely...")
     app.run_polling()
 
 if __name__ == "__main__":
